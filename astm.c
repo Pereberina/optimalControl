@@ -10,7 +10,7 @@
 
 #define L0 1.0 // Lipschitz constant
 #define T 4.0 // time limit
-#define SIZE 1001 // size of step + 1
+#define SIZE ((int)(T/pow(EPSILON, 3.0/2))) // size of step + 1
 #define TAU (T/(SIZE - 1)) // step in time
 #define F0(t, x, u) (u*u + x) // integrand
 #define F(t, x, u) (u)
