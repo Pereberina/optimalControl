@@ -4,7 +4,7 @@
 #include <time.h>
 //#define EPSILON 0.000000005
 //#define STOPPING_RULE(prev, next) (fabs(prev - next) <= EPSILON)
-#define EPSILON 0.001 // accuracy
+#define EPSILON 0.01 // accuracy
 #define MIN -14.0/3
 #define STOPPING_RULE(next) (fabs(next - MIN) <= EPSILON)
 
@@ -16,7 +16,7 @@
 #define F(t, x, u) (u)
 #define GRADIENT_FI(x) 0 // gradient of a terminal part
 #define X0 0 // initial condition
-#define DELTA 0.01
+#define DELTA0 EPSILON
 #define CONST 0.5 // y0
 
 // H is Pontryagin's function
@@ -105,6 +105,7 @@ int main(void) {
     double *gradient;
     double *t;
     double L;
+    double delta;
     int prev;
     int next;
     int k;
@@ -164,6 +165,8 @@ int main(void) {
     double Jq, Jy;
     double s;
 
+    delta = DELTA0;
+
     Jy = J(y[0], x, t);
     j0 = 0;
     do {
@@ -187,7 +190,7 @@ int main(void) {
         }
 
         j0++;
-    } while (Jq > Jy + s + DELTA);
+    } while (Jq > Jy + s + delta);
 
     iterations = 0;
     prev = 0;
@@ -195,6 +198,9 @@ int main(void) {
 
     // ASTM
     do {
+        iterations++;
+
+        delta = DELTA0/iterations;
         L = L/2;
         double currL = L;
         j0 = 0;
@@ -229,11 +235,10 @@ int main(void) {
 
             j0++;
 
-        } while (Jy + s + DELTA < Jq);
+        } while (Jy + s + delta < Jq);
 
         //J_prev = J(q[prev], x, t);
         //J_next = J(q[next], x, t);
-        iterations++;
 
         k = prev;
         prev = next;
@@ -247,7 +252,7 @@ int main(void) {
         printf("(%lf, %lf) ", t[k], q[prev][k]);
     }
 
-    printf("\nIterations: %d, J = %lf\n", iterations, Jq);
+    printf("\nIterations: %d, J = %lf, delta = %lf\n", iterations, Jq, delta);
     printf("Time: %lf s \n", (double)((end.tv_sec - start.tv_sec)*1000000000L + (end.tv_nsec - start.tv_nsec))/1000000000L );
 
 
