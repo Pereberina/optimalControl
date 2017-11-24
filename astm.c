@@ -2,15 +2,14 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
-//#define EPSILON 0.000000005
-//#define STOPPING_RULE(prev, next) (fabs(prev - next) <= EPSILON)
-#define EPSILON 0.01 // accuracy
+#include <string.h>
+#define EPSILON 0.1 // accuracy
 #define MIN -14.0/3
 #define STOPPING_RULE(next) (fabs(next - MIN) <= EPSILON)
 
 #define L0 1.0 // Lipschitz constant
 #define T 4.0 // time limit
-#define SIZE ((int)(T/pow(EPSILON, 3.0/2))) // size of step + 1
+#define SIZE ((int)(T/pow(EPSILON, 3.0/2))) // step count
 #define TAU (T/(SIZE - 1)) // step in time
 #define F0(t, x, u) (u*u + x) // integrand
 #define F(t, x, u) (u)
@@ -50,7 +49,7 @@ void accept_value(double *q) {
     }
 }
 
-
+// set gradient and x
 int gradient_J(double *u, double *x, double *t, double *gradient) {
     int k;
     double *psi;
@@ -61,6 +60,9 @@ int gradient_J(double *u, double *x, double *t, double *gradient) {
     }
 
     // lattice
+    memset(x, 0, sizeof(int)*SIZE);
+    memset(gradient, 0, sizeof(int)*SIZE);
+
     x[0] = X0;
     for (k = 0; k < SIZE - 1; k++) {
         x[k + 1] = x[k] + TAU*F(t[k], x[k], u[k]);
@@ -82,6 +84,7 @@ int gradient_J(double *u, double *x, double *t, double *gradient) {
 
 
 // calculate integral via rectangle method
+// u, x, t should be set
 double J(double *u, double *x, double *t) {
     double S;
     int k;
@@ -102,7 +105,7 @@ int main(void) {
     double *y[2];
     double *q[2];
     double *x;
-    double *gradient;
+    double *gradient, *gradientQ;
     double *t;
     double L;
     double delta;
@@ -111,10 +114,7 @@ int main(void) {
     int k;
     int j0;
     int iterations;
-    //double J_prev, J_next;
     struct timespec start, end;
-
-
 
     if ((t = (double *)malloc(SIZE*sizeof(double))) == NULL) {
         printf("Not enough memory\n");
@@ -130,6 +130,12 @@ int main(void) {
         printf("Not enough memory\n");
         return -1;
     }
+
+    if ((gradientQ = (double *)malloc(SIZE*sizeof(double))) == NULL) {
+        printf("Not enough memory\n");
+        return -1;
+    }
+
     for (k = 0; k < 2; k++) {
         if ((u[k] = (double *)malloc(SIZE*sizeof(double))) == NULL) {
             printf("Not enough memory\n");
@@ -147,27 +153,23 @@ int main(void) {
 
     clock_gettime(CLOCK_MONOTONIC, &start);
 
-
-
     for (k = 0; k < SIZE; k++) {
         y[0][k] = CONST;
     }
 
+    // Initialization
     set_t(t);
+
+    double Jq, Jy;
+    double s;
+    delta = DELTA0;
 
     if (gradient_J(y[0], x, t, gradient) < 0) {
         printf("Not enough memory\n");
         return -1;
     }
-
-    // Initialization
-
-    double Jq, Jy;
-    double s;
-
-    delta = DELTA0;
-
     Jy = J(y[0], x, t);
+
     j0 = 0;
     do {
         L = pow(2, j0)*L0;
@@ -183,6 +185,10 @@ int main(void) {
         accept_value(u[0]);
         accept_value(q[0]);
 
+        if (gradient_J(q[0], x, t, gradientQ) < 0) {
+            printf("Not enough memory\n");
+            return -1;
+        }
         Jq = J(q[0], x, t);
         s = 0;
         for (k = 0; k < SIZE; k++) {
@@ -217,6 +223,7 @@ int main(void) {
                 printf("Not enough memory\n");
                 return -1;
             }
+            Jy = J(y[next], x, t);
 
             for (k = 0; k < SIZE; k++) {
                 u[next][k] = u[prev][k] - alpha[next]*gradient[k];
@@ -226,13 +233,16 @@ int main(void) {
             accept_value(u[next]);
             accept_value(q[next]);
 
-            Jy = J(y[next], x, t);
-            Jq = J(q[next], x, t);
             s = 0;
             for (k = 0; k < SIZE; k++) {
                 s += gradient[k]*(q[next][k] - y[next][k]) + L/2.0*(q[next][k] - y[next][k])*(q[next][k] - y[next][k]);
             }
 
+            if (gradient_J(q[next], x, t, gradientQ) < 0) {
+                printf("Not enough memory\n");
+                return -1;
+            }
+            Jq = J(q[next], x, t);
             j0++;
 
         } while (Jy + s + delta < Jq);
