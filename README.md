@@ -1,5 +1,4 @@
-# optimalControl
-Convex optimal control problem
+# Convex optimal control problem
 
 Src:
 https://arxiv.org/ftp/arxiv/papers/1703/1703.00267.pdf <br />
