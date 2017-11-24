@@ -247,16 +247,12 @@ int main(void) {
 
         } while (Jy + s + delta < Jq);
 
-        //J_prev = J(q[prev], x, t);
-        //J_next = J(q[next], x, t);
-
         k = prev;
         prev = next;
         next = k;
     } while (!STOPPING_RULE(Jq));
 
     clock_gettime(CLOCK_MONOTONIC, &end);
-
 
     for (k = 0; k < SIZE; k++) {
         printf("(%lf, %lf) ", t[k], q[prev][k]);
@@ -265,11 +261,10 @@ int main(void) {
     printf("\nIterations: %d, J = %lf, delta = %lf\n", iterations, Jq, delta);
     printf("Time: %lf s \n", (double)((end.tv_sec - start.tv_sec)*1000000000L + (end.tv_nsec - start.tv_nsec))/1000000000L );
 
-
-
     free(t);
     free(x);
     free(gradient);
+    free(gradientQ);
     for (k = 0; k < 2; k++) {
         free(u[k]);
         free(y[k]);
